@@ -7,14 +7,12 @@ Works on **phones, tablets, and computers**.
 ---
 
 ## 🎮 Play Now
-👉 https://github.com/xustme/Safari-Match
+👉 
 
 ---
 
 ## 📸 Screenshots
-![screenshot](screenshot.png)
-*(Replace this with a real screenshot filename if different.)*
-
+![screenshot]()
 ---
 
 ## 🚀 Features
@@ -54,4 +52,4 @@ Made for **kids and families** to enjoy fun screen time:
 
 ---
 ## 📜 License
-MIT License – free to use, share, and remix.
+MIT License – free to use and share. 
