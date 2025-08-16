@@ -7,7 +7,7 @@ Works on **phones, tablets, and computers**.
 ---
 
 ## 🎮 Play Now
-👉 https://YOUR-USERNAME.github.io/safari-match/
+👉 https://YOUR-xustme.github.io/safari-match/
 
 ---
 
