@@ -1,9 +1,10 @@
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Safari Match – Kids Memory Game</title>
-  <meta name="description" content="A free, kid‑friendly animal memory match game. Works on phones and browsers. No ads, no tracking." />
+  <meta name="description" content="A free, kid-friendly animal memory match game. Works on phones and browsers. No ads, no tracking." />
   <style>
     :root{
       --bg:#f7f7fb; --card:#ffffff; --ink:#1f2937; --muted:#6b7280; --brand:#22c55e; --accent:#a78bfa; --danger:#ef4444;
@@ -77,7 +78,7 @@
       <div class="logo">🦁</div>
       <div>
         <div style="font-size:1.4rem">Safari Match</div>
-        <div style="font-size:.9rem; color:var(--muted)">Kid‑friendly memory game</div>
+        <div style="font-size:.9rem; color:var(--muted)">Kid-friendly memory game</div>
       </div>
     </div>
 
@@ -112,6 +113,13 @@
   </main>
 
   <footer>© <span id="year"></span> Safari Match • No ads • No tracking</footer>
+
+  <!-- 🔊 Sounds -->
+  <audio id="flipSound" src="https://actions.google.com/sounds/v1/cartoon/pop.ogg"></audio>
+  <audio id="winSound" src="https://actions.google.com/sounds/v1/ambiences/celebration_horn.ogg"></audio>
+
+  <!-- 🎊 Confetti library -->
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
 
   <script>
     const EMOJIS = [
@@ -197,6 +205,7 @@
       if(lock || card===first || card.classList.contains('matched')) return;
       if(!startTime) startTimer();
       card.classList.add('flipped');
+      document.getElementById('flipSound').play(); // 🔊 flip sound
       if(!first){ first = card; return; }
       second = card; lock = true; moves++; movesEl.textContent = moves;
       if(first.dataset.emoji === second.dataset.emoji){
@@ -223,6 +232,17 @@
       finalTimeEl.textContent = formatTime(sec);
       finalMovesEl.textContent = moves;
       winWrap.classList.add('active');
+
+      // 🔊 play win sound
+      document.getElementById('winSound').play();
+
+      // 🎊 launch confetti
+      confetti({
+        particleCount: 150,
+        spread: 70,
+        origin: { y: 0.6 }
+      });
+
       const best = JSON.parse(localStorage.getItem(bestKey())||'null');
       const current = {sec, moves};
       if(!best || sec < best.sec || (sec===best.sec && moves < best.moves)){
