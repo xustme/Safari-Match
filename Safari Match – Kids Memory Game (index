@@ -1,0 +1,255 @@
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Safari Match – Kids Memory Game</title>
+  <meta name="description" content="A free, kid‑friendly animal memory match game. Works on phones and browsers. No ads, no tracking." />
+  <style>
+    :root{
+      --bg:#f7f7fb; --card:#ffffff; --ink:#1f2937; --muted:#6b7280; --brand:#22c55e; --accent:#a78bfa; --danger:#ef4444;
+      --radius:18px; --shadow:0 10px 20px rgba(0,0,0,0.08);
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{
+      margin:0; font-family:system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color:var(--ink); background:linear-gradient(180deg,#fdfcff, #eef3ff 70%);
+      display:flex; flex-direction:column; align-items:center; gap:16px; padding:16px;
+    }
+    header{
+      width:100%; max-width:980px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;
+    }
+    .title{display:flex; align-items:center; gap:10px; font-weight:800; letter-spacing:.2px}
+    .title .logo{width:44px; height:44px; display:grid; place-items:center; border-radius:50%; background:var(--brand); color:white; box-shadow:var(--shadow); font-size:24px}
+    .panel{
+      background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:10px 12px; display:flex; align-items:center; gap:10px;
+    }
+    select, button{
+      border:none; border-radius:12px; padding:10px 12px; font-weight:600; background:#f3f4f6; color:var(--ink); cursor:pointer;
+    }
+    button.primary{background:var(--brand); color:white}
+    button.ghost{background:transparent}
+    button:disabled{opacity:.6; cursor:not-allowed}
+
+    .stats{display:flex; align-items:center; gap:12px; font-weight:700}
+    .stat{background:#f9fafb; padding:6px 10px; border-radius:10px; color:#111827}
+
+    main{width:100%; max-width:980px; display:grid; gap:14px}
+
+    /* Grid area */
+    .grid-wrap{
+      background:var(--card); border-radius:var(--radius); box-shadow:var(--shadow); padding:14px; position:relative;
+    }
+    .grid{
+      display:grid; gap:10px; justify-content:center; align-content:center;
+    }
+
+    .card{
+      width:84px; height:96px; border-radius:18px; background:linear-gradient(180deg,#ffffff,#f6f7fb); box-shadow:var(--shadow);
+      display:grid; place-items:center; font-size:42px; cursor:pointer; user-select:none; transform-style:preserve-3d; transition:transform .35s ease;
+      position:relative; perspective:800px;
+    }
+    .card-inner{position:relative; width:100%; height:100%; transform-style:preserve-3d; transition:transform .45s ease}
+    .card.flipped .card-inner{transform:rotateY(180deg)}
+    .face{
+      position:absolute; inset:0; display:grid; place-items:center; backface-visibility:hidden; border-radius:inherit;
+    }
+    .front{ background:linear-gradient(180deg,#ffffff,#eef2ff); border:2px solid #e5e7eb; }
+    .back{ transform:rotateY(180deg); font-size:44px }
+
+    .win{
+      position:absolute; inset:0; display:none; align-items:center; justify-content:center; backdrop-filter:blur(2px);
+    }
+    .win.active{display:flex}
+    .win .modal{
+      background:var(--card); padding:20px; border-radius:22px; box-shadow:var(--shadow); text-align:center;
+    }
+
+    footer{opacity:.75}
+
+    @media (min-width:480px){ .card{ width:96px; height:108px } }
+    @media (min-width:800px){ .card{ width:104px; height:118px } }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="title">
+      <div class="logo">🦁</div>
+      <div>
+        <div style="font-size:1.4rem">Safari Match</div>
+        <div style="font-size:.9rem; color:var(--muted)">Kid‑friendly memory game</div>
+      </div>
+    </div>
+
+    <div class="panel">
+      <label for="difficulty" class="stat" title="Grid size">Difficulty</label>
+      <select id="difficulty" aria-label="Choose difficulty">
+        <option value="easy">Easy (4×3)</option>
+        <option value="medium" selected>Medium (4×4)</option>
+        <option value="hard">Hard (6×4)</option>
+      </select>
+      <button id="restart" class="primary" aria-label="Restart game">Restart</button>
+    </div>
+
+    <div class="panel stats" role="status" aria-live="polite">
+      <div class="stat">Moves: <span id="moves">0</span></div>
+      <div class="stat">Time: <span id="time">0s</span></div>
+      <div class="stat">Best: <span id="best">—</span></div>
+    </div>
+  </header>
+
+  <main>
+    <div class="grid-wrap">
+      <div id="grid" class="grid" aria-label="Game board" role="grid"></div>
+      <div class="win" id="win">
+        <div class="modal">
+          <h2 style="margin:0 0 6px">🎉 You matched them all!</h2>
+          <p style="margin:0 0 10px">Time: <b id="finalTime"></b> · Moves: <b id="finalMoves"></b></p>
+          <button id="playAgain" class="primary">Play again</button>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer>© <span id="year"></span> Safari Match • No ads • No tracking</footer>
+
+  <script>
+    const EMOJIS = [
+      "🦁","🐯","🐵","🐶","🐱","🦊","🐼","🐨","🐷","🐸","🐔","🐙",
+      "🦄","🐮","🐰","🐹","🐻","🐼","🦓","🦒","🐢","🐠","🦜","🦥"
+    ];
+
+    const DIFFICULTY = {
+      easy:  { cols:4, rows:3 }, // 12 cards => 6 pairs
+      medium:{ cols:4, rows:4 }, // 16 cards => 8 pairs
+      hard:  { cols:6, rows:4 }, // 24 cards => 12 pairs
+    };
+
+    const gridEl = document.getElementById('grid');
+    const movesEl = document.getElementById('moves');
+    const timeEl  = document.getElementById('time');
+    const bestEl  = document.getElementById('best');
+    const diffEl  = document.getElementById('difficulty');
+    const restartBtn = document.getElementById('restart');
+    const winWrap = document.getElementById('win');
+    const finalTimeEl = document.getElementById('finalTime');
+    const finalMovesEl = document.getElementById('finalMoves');
+    const playAgainBtn = document.getElementById('playAgain');
+
+    let first=null, second=null, lock=false, matched=0, moves=0, startTime=null, timerInt=null, totalPairs=0;
+
+    function shuffle(a){
+      for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a;
+    }
+
+    function sampleEmojis(n){
+      const copy=[...new Set(EMOJIS)]; shuffle(copy); return copy.slice(0,n);
+    }
+
+    function formatTime(s){
+      const m=Math.floor(s/60); const r=s%60; return m?`${m}m ${r}s`:`${r}s`;
+    }
+
+    function bestKey(){ return `safarimatch_best_${diffEl.value}` }
+
+    function setGrid(cols, rows){
+      gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+      gridEl.style.gridTemplateRows = `repeat(${rows}, auto)`;
+      gridEl.setAttribute('aria-rowcount', rows);
+      gridEl.setAttribute('aria-colcount', cols);
+    }
+
+    function buildCards(){
+      const {cols, rows} = DIFFICULTY[diffEl.value];
+      setGrid(cols, rows);
+      const pairs = (cols*rows)/2; totalPairs=pairs; matched=0; moves=0; movesEl.textContent = moves;
+      gridEl.innerHTML = '';
+      const chosen = sampleEmojis(pairs);
+      const deck = shuffle([...chosen, ...chosen]);
+
+      deck.forEach((em, i)=>{
+        const card = document.createElement('button');
+        card.className='card';
+        card.setAttribute('role','gridcell');
+        card.setAttribute('aria-label','Hidden card');
+        card.dataset.emoji = em;
+        card.dataset.index = i;
+        card.innerHTML = `
+          <div class="card-inner">
+            <div class="face front" aria-hidden="true">❓</div>
+            <div class="face back">${em}</div>
+          </div>`;
+        card.addEventListener('click', ()=>flip(card));
+        gridEl.appendChild(card);
+      });
+    }
+
+    function startTimer(){
+      clearInterval(timerInt); startTime = Date.now();
+      timerInt = setInterval(()=>{
+        const sec = Math.floor((Date.now()-startTime)/1000); timeEl.textContent = `${sec}s`;
+      }, 250);
+    }
+
+    function stopTimer(){ clearInterval(timerInt); }
+
+    function flip(card){
+      if(lock || card===first || card.classList.contains('matched')) return;
+      if(!startTime) startTimer();
+      card.classList.add('flipped');
+      if(!first){ first = card; return; }
+      second = card; lock = true; moves++; movesEl.textContent = moves;
+      if(first.dataset.emoji === second.dataset.emoji){
+        first.classList.add('matched'); second.classList.add('matched');
+        first.setAttribute('aria-label',`Matched ${first.dataset.emoji}`);
+        second.setAttribute('aria-label',`Matched ${second.dataset.emoji}`);
+        matched++;
+        resetPick();
+        if(matched===totalPairs){ onWin(); }
+      } else {
+        setTimeout(()=>{
+          first.classList.remove('flipped');
+          second.classList.remove('flipped');
+          resetPick();
+        }, 700);
+      }
+    }
+
+    function resetPick(){ first=null; second=null; lock=false; }
+
+    function onWin(){
+      stopTimer();
+      const sec = Math.floor((Date.now()-startTime)/1000);
+      finalTimeEl.textContent = formatTime(sec);
+      finalMovesEl.textContent = moves;
+      winWrap.classList.add('active');
+      const best = JSON.parse(localStorage.getItem(bestKey())||'null');
+      const current = {sec, moves};
+      if(!best || sec < best.sec || (sec===best.sec && moves < best.moves)){
+        localStorage.setItem(bestKey(), JSON.stringify(current));
+        renderBest();
+      }
+    }
+
+    function resetGame(){
+      stopTimer(); timeEl.textContent='0s'; startTime=null; winWrap.classList.remove('active');
+      buildCards();
+    }
+
+    function renderBest(){
+      const best = JSON.parse(localStorage.getItem(bestKey())||'null');
+      bestEl.textContent = best? `${formatTime(best.sec)}, ${best.moves} moves` : '—';
+    }
+
+    // Events
+    diffEl.addEventListener('change', ()=>{ renderBest(); resetGame(); });
+    restartBtn.addEventListener('click', resetGame);
+    playAgainBtn.addEventListener('click', resetGame);
+
+    // Init
+    document.getElementById('year').textContent = new Date().getFullYear();
+    renderBest();
+    resetGame();
+  </script>
+</body>
+</html>
